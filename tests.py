@@ -27,6 +27,42 @@ class FlaskProjectTest(FlaskTest):
         except Exception as ex:
             print(ex)
 
+    async def get_input_field(self, page):
+        input_field = await page.querySelector('input#input-city')
+        if input_field is None:
+            raise WrongAnswer("Can't find input field with 'input-city' id!")
+        return input_field
+
+    async def get_submit_button(self, page):
+        button = await page.querySelector('button.submit-button')
+        if button is None:
+            raise WrongAnswer("Can't find a button with 'submit-button' class!")
+        return button
+
+    @classmethod
+    async def check_cards_in_the_page(cls, page, cards_number):
+        cards = await page.querySelectorAll('div.card')
+
+        if len(cards) == 0:
+            raise WrongAnswer("Can't find <div> blocks with class 'card'")
+
+        if len(cards) != cards_number:
+            raise WrongAnswer(f"Found {len(cards)} <div> blocks with class 'card', but should be {cards_number}!")
+
+        for card in cards:
+            degrees = await card.querySelector('div.degrees')
+            if degrees is None:
+                raise WrongAnswer(
+                    "One of the <div> blocks with card class 'card' doesn't contain <div> block with class 'degrees'")
+            state = await card.querySelector('div.state')
+            if state is None:
+                raise WrongAnswer(
+                    "One of the <div> blocks with card class 'card' doesn't contain <div> block with class 'state'")
+            city = await card.querySelector('div.city')
+            if city is None:
+                raise WrongAnswer(
+                    "One of the <div> blocks with card class 'card' doesn't contain <div> block with class 'city'")
+
     async def test_response_async(self):
         browser = await self.launch_and_get_browser()
         page = await browser.newPage()
@@ -53,37 +89,10 @@ class FlaskProjectTest(FlaskTest):
         if cards_div is None:
             raise WrongAnswer("Can't find <div> block with class 'cards'")
 
-        cards = await page.querySelectorAll('div.card')
+        button = await self.get_submit_button(page)
+        input_field = await self.get_input_field(page)
 
-        if len(cards) == 0:
-            raise WrongAnswer("Can't find <div> blocks with class 'card'")
-
-        if len(cards) != 3:
-            raise WrongAnswer(f"Found {len(cards)} <div> blocks with class 'card', but should be 3!")
-
-        for card in cards:
-            degrees = await card.querySelector('div.degrees')
-            if degrees is None:
-                raise WrongAnswer(
-                    "One of the <div> blocks with card class 'card' doesn't contain <div> block with class 'degrees'")
-            state = await card.querySelector('div.state')
-            if state is None:
-                raise WrongAnswer(
-                    "One of the <div> blocks with card class 'card' doesn't contain <div> block with class 'state'")
-            city = await card.querySelector('div.city')
-            if city is None:
-                raise WrongAnswer(
-                    "One of the <div> blocks with card class 'card' doesn't contain <div> block with class 'city'")
-
-        input_field = await page.querySelector('input#input-city')
-
-        if input_field is None:
-            raise WrongAnswer("Can't find <input> element with id 'input-city'")
-
-        button = await page.querySelector('button.submit-button')
-
-        if button is None:
-            raise WrongAnswer("Can't find <button> element with class 'submit-button'")
+        await self.check_cards_in_the_page(page, 3)
 
         await self.close_browser(browser)
 
@@ -92,6 +101,33 @@ class FlaskProjectTest(FlaskTest):
     @dynamic_test(order=2)
     def test_main_page_structure(self):
         asyncio.new_event_loop().run_until_complete(self.test_main_page_structure_async())
+        return CheckResult.correct()
+
+    async def test_add_city_async(self):
+        browser = await self.launch_and_get_browser()
+        page = await browser.newPage()
+        await page.goto(self.get_url())
+
+        input_field = await self.get_input_field(page)
+        await input_field.type('Boston')
+
+        button = await self.get_submit_button(page)
+
+        await asyncio.gather(
+            page.waitForNavigation(),
+            button.click(),
+        )
+
+        cards_div = await page.querySelector('div.cards')
+
+        if cards_div is None:
+            raise WrongAnswer("Can't find <div> block with class 'cards'")
+
+        await self.check_cards_in_the_page(page, 4)
+
+    @dynamic_test(order=3)
+    def test_add_city(self):
+        asyncio.new_event_loop().run_until_complete(self.test_add_city_async())
         return CheckResult.correct()
 
 
