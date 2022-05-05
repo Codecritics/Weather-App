@@ -29,7 +29,7 @@
     {% for city, weather in cities.items() %}
     <div class="card evening-morning">
         <div class="delete-wrapper">
-            <form action="#" method="POST">
+            <form action="/delete/{{ weather['id'] }}" method="POST">
                 <input type="hidden" name="id" value="">
                 <button class="delete-button" type="submit">&#10006;</button>
             </form>
